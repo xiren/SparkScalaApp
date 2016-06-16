@@ -1,5 +1,10 @@
-.gitignore
+!.gitignore
+/target/
+
+# Intellij
 .idea/
-project/project/
-project/target/
-target/
+*.iml
+*.iws
+
+/project/project/
+/project/target/
