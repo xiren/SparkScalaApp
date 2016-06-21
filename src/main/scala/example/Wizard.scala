@@ -13,12 +13,12 @@ class Wizard @Inject()(trainer: DecisionTreeTrainer) {
     val records = YahooConnector.send(code, market).reverse
     val last = records.last
     val lastDate = last(0)
-    val prediction = classifier(records, step)
-    val value = regression(records, step)
-    new Eidolon(lastDate, value, prediction.accuracy, prediction.result)
+    val classifierPrediction = classifier(records, step)
+    val regressionPrediction = regression(records, step)
+    new Eidolon(lastDate, regressionPrediction.result, regressionPrediction.rmse, classifierPrediction.accuracy, classifierPrediction.result)
   }
 
-  private def classifier(records: List[Array[String]], step: Int): Prediction = {
+  private def classifier(records: List[Array[String]], step: Int): ClassifierPrediction = {
     val last = records.last
     var index = 0
     val trainingData: ListBuffer[Array[String]] = new ListBuffer()
@@ -38,10 +38,10 @@ class Wizard @Inject()(trainer: DecisionTreeTrainer) {
     }
 
     val destinationData = Array(last(1).toString.toDouble, last(2).toString.toDouble, last(3).toString.toDouble, last(4).toString.toDouble, last(5).toString.toDouble)
-    trainer.train(trainingData.toList, destinationData)
+    trainer.classifierTrain(trainingData.toList, destinationData)
   }
 
-  private def regression(records: List[Array[String]], step: Int): Double = {
+  private def regression(records: List[Array[String]], step: Int): RegressionPrediction = {
     val last = records.last
     var index = 0
     val trainingData: ListBuffer[Array[String]] = new ListBuffer()
@@ -57,13 +57,14 @@ class Wizard @Inject()(trainer: DecisionTreeTrainer) {
   }
 }
 
-class Eidolon(d: String, v: Double, a: Double, u: Any) {
+class Eidolon(d: String, v: Double, r: Double, a: Double, u: Any) {
   val lastDate = d
   val value = v
+  val rmse = r
   val accuracy = a
   val up = u
 
-  override def toString: String = s"lastDate:" + lastDate +", value:" + value +", accuracy:" + accuracy +", up:" + up
+  override def toString: String = s"lastDate:" + lastDate + ", value:" + value + ", RMSE:" + rmse + ", accuracy:" + accuracy + ", up:" + up
 }
 
 

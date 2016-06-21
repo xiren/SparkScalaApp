@@ -16,16 +16,16 @@ import org.apache.spark.rdd.RDD
   */
 
 trait Trainer {
-  def train(trainingData: List[Array[String]], destinationData: Array[Double]): Prediction
+  def classifierTrain(trainingData: List[Array[String]], destinationData: Array[Double]): ClassifierPrediction
 
-  def trainRegression(trainingData: List[Array[String]], destinationData: Array[Double]): Double
+  def trainRegression(trainingData: List[Array[String]], destinationData: Array[Double]): RegressionPrediction
 }
 
 @Singleton
 class DecisionTreeTrainer @Inject()(ssc: SingletonSparkContext) extends Trainer {
   val sc = ssc.getSparkContext
 
-  override def train(trainingData: List[Array[String]], destinationData: Array[Double]): Prediction = {
+  override def classifierTrain(trainingData: List[Array[String]], destinationData: Array[Double]): ClassifierPrediction = {
     val data = toRDD(trainingData)
     val scaledData = scaledFeature(data)
 
@@ -35,14 +35,15 @@ class DecisionTreeTrainer @Inject()(ssc: SingletonSparkContext) extends Trainer 
       val predicted = if (score > 0.5) 1 else 0
       if (predicted == point.label) 1 else 0
     }.sum()
-    new Prediction(dtTotalCorrect / scaledData.count(), dtModel.predict(Vectors.dense(destinationData)))
+    new ClassifierPrediction(dtTotalCorrect / scaledData.count(), dtModel.predict(Vectors.dense(destinationData)))
   }
 
-  override def trainRegression(trainingData: List[Array[String]], destinationData: Array[Double]): Double = {
+  override def trainRegression(trainingData: List[Array[String]], destinationData: Array[Double]): RegressionPrediction = {
     val data = toRDD(trainingData)
     val scaledData = scaledFeature(data)
     val dtModel = DecisionTree.trainRegressor(scaledData, Map[Int, Int](), "variance", 20, 32);
-    dtModel.predict(Vectors.dense(destinationData))
+    val predictionRating = scaledData.map(r => (r.label, dtModel.predict(r.features)))
+    new RegressionPrediction(math.sqrt(predictionRating.map(r => (r._1 - r._2) * (r._1 - r._2)).reduce(_ + _) / scaledData.count()), dtModel.predict(Vectors.dense(destinationData)))
   }
 
   private def scaledFeature(data: RDD[LabeledPoint]): RDD[LabeledPoint] = {
@@ -59,8 +60,13 @@ class DecisionTreeTrainer @Inject()(ssc: SingletonSparkContext) extends Trainer 
   }
 }
 
-class Prediction(a: Double, r: Any) {
-  var accuracy: Double = a
-  var result = r
+class ClassifierPrediction(a: Double, r: Double) {
+  val accuracy: Double = a
+  val result = r
+}
+
+class RegressionPrediction(a: Double, r: Double) {
+  val rmse = a
+  val result = r
 }
 

@@ -5,15 +5,15 @@ package example
   */
 object Cabin {
   def main(args: Array[String]) {
-    val market = "sz"
-    val code = "002204"
-    val step = 1
+    val exchange = "ss"
+    val symbol = "002204"
+    val step = 10
 
     val ssc = new SingletonSparkContext();
     val trainer = new DecisionTreeTrainer(ssc);
     val wizard = new Wizard(trainer)
 
-    val eidolon = wizard.conjure(code, market, step);
+    val eidolon = wizard.conjure(symbol, exchange, step);
 
     println(eidolon.toString)
   }
