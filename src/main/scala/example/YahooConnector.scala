@@ -1,5 +1,6 @@
 package example
 
+import java.time.LocalDate
 import javax.inject.Singleton
 
 import scala.io.Source
@@ -14,7 +15,7 @@ object YahooConnector {
 
   def send(code: String, market: String): List[Array[String]] = {
     val lines = Source.fromURL(URL.format(code, market), "UTF-8").getLines()
-    lines.drop(1).map(_.split(",")).filter(_ (5).toDouble > "0".toDouble).toList
+    lines.drop(1).map(_.split(",")).filter(_ (5).toDouble > "0".toDouble).map{case Array(time, open, high, low, close, volume) => Array(time, open, high, low, close, volume)}.toList
   }
 
 }

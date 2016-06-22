@@ -60,12 +60,12 @@ class DecisionTreeTrainer @Inject()(ssc: SingletonSparkContext) extends Trainer 
   }
 }
 
-class ClassifierPrediction(a: Double, r: Double) {
+case class ClassifierPrediction(a: Double, r: Double) {
   val accuracy: Double = a
   val result = r
 }
 
-class RegressionPrediction(a: Double, r: Double) {
+case class RegressionPrediction(a: Double, r: Double) {
   val rmse = a
   val result = r
 }

@@ -9,16 +9,16 @@ import scala.collection.mutable.ListBuffer
   */
 class Wizard @Inject()(trainer: DecisionTreeTrainer) {
 
-  def conjure(code: String, market: String, step: Int): Eidolon = {
-    val records = YahooConnector.send(code, market).reverse
+  def conjure(symbol: String, step: Int): Eidolon = {
+    val records = XueqiuConnector.send(symbol)
     val last = records.last
-    val lastDate = last(0)
+    val lastDate = last(0).toString
     val classifierPrediction = classifier(records, step)
     val regressionPrediction = regression(records, step)
-    new Eidolon(lastDate, regressionPrediction.result, regressionPrediction.rmse, classifierPrediction.accuracy, classifierPrediction.result)
+    new Eidolon(lastDate, regressionPrediction, classifierPrediction)
   }
 
-  private def classifier(records: List[Array[String]], step: Int): ClassifierPrediction = {
+  private def classifier(records: List[Array[Any]], step: Int): ClassifierPrediction = {
     val last = records.last
     var index = 0
     val trainingData: ListBuffer[Array[String]] = new ListBuffer()
@@ -27,12 +27,12 @@ class Wizard @Inject()(trainer: DecisionTreeTrainer) {
       if ((step + index) < records.size) {
         val targetClose = records(step + index)(4)
         var swing = 0
-        if ((targetClose.toDouble - todayClose.toDouble) > 0) {
+        if ((targetClose.toString.toDouble - todayClose.toString.toDouble) > 0) {
           swing = 1
         } else {
           swing = 0
         }
-        trainingData += Array(swing.toString, r(1), r(2), r(3), r(4), r(5))
+        trainingData += getArray(r, 1, r.size, swing.toString)
       }
       index += 1
     }
@@ -41,14 +41,25 @@ class Wizard @Inject()(trainer: DecisionTreeTrainer) {
     trainer.classifierTrain(trainingData.toList, destinationData)
   }
 
-  private def regression(records: List[Array[String]], step: Int): RegressionPrediction = {
+  private def getArray(arr: Array[Any], begin: Int, end: Int, target:String) : Array[String]= {
+    var n = 1
+    val result = new Array[String]((end - begin + 1))
+    result(0) = target
+    for (i <- begin until end){
+      result(n) = arr(i).toString
+      n += 1
+    }
+    result
+  }
+
+  private def regression(records: List[Array[Any]], step: Int): RegressionPrediction = {
     val last = records.last
     var index = 0
     val trainingData: ListBuffer[Array[String]] = new ListBuffer()
     for (r <- records) {
       if ((step + index) < records.size) {
         val targetClose = records(step + index)(4)
-        trainingData += Array(targetClose, r(1), r(2), r(3), r(4), r(5))
+        trainingData += getArray(r, 1, r.size, targetClose.toString)
       }
       index += 1
     }
@@ -57,14 +68,14 @@ class Wizard @Inject()(trainer: DecisionTreeTrainer) {
   }
 }
 
-class Eidolon(d: String, v: Double, r: Double, a: Double, u: Any) {
+case class Eidolon(d: String, r: RegressionPrediction, c: ClassifierPrediction) {
   val lastDate = d
-  val value = v
-  val rmse = r
-  val accuracy = a
-  val up = u
+  val regressionPrediction = r
+  val classCastException = c
 
-  override def toString: String = s"lastDate:" + lastDate + ", value:" + value + ", RMSE:" + rmse + ", accuracy:" + accuracy + ", up:" + up
+  override def toString: String = "{lastDate:"+lastDate+", " +
+    "regressionPrediction: {RMSE : "+regressionPrediction.rmse+", value: "+regressionPrediction.result+"}," +
+    "classCastException: {accuracy:"+classCastException.accuracy+", change:"+classCastException.result+" }}"
 }
 
 
